@@ -2,6 +2,10 @@
 
 一般的に有名な文字列エンコーディングごとの HTML を GitHub Pages でホストするテスト用リポジトリです。
 
+### 公開URL
+
+- `https://lirlia.github.io/encoding-test/`
+
 ### 公開方法（GitHub Pages）
 
 - `main` ブランチへの push をトリガに GitHub Actions が `public/` をデプロイします。
