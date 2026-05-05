@@ -37,16 +37,28 @@ SAMPLE_LINES = [
 ]
 
 
-def build_html(*, title: str, charset: str, description: str, canonical_path: str) -> str:
-    # GitHub Pages では絶対URLが確定しないため、OGPは相対URL中心にして
-    # og:url は canonical のパスのみを埋め、実運用では公開URLに合わせて上書きしてもらう。
+def build_html(
+    *,
+    title: str,
+    charset: str,
+    description: str,
+    canonical_path: str,
+    og_image_path: str,
+    nav_home_href: str,
+    nav_encoding_hrefs: list[tuple[str, str]],
+) -> str:
     og_title = title
     og_desc = description
-    og_image = "/ogp.png"
+    og_image = og_image_path
     generated = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     rows = "\n".join(
         f"<tr><th>{label}</th><td><code>{value}</code></td></tr>" for label, value in SAMPLE_LINES
+    )
+
+    nav_items = "\n".join(
+        [f'        <a class="pill" href="{nav_home_href}">Home</a>']
+        + [f'        <a class="pill" href="{href}">{label}</a>' for label, href in nav_encoding_hrefs]
     )
 
     return f"""<!doctype html>
@@ -189,14 +201,7 @@ def build_html(*, title: str, charset: str, description: str, canonical_path: st
       </header>
 
       <nav>
-        <a class="pill" href="/index.html">Home</a>
-        <a class="pill" href="/encodings/utf-8.html">UTF-8</a>
-        <a class="pill" href="/encodings/shift_jis.html">Shift_JIS</a>
-        <a class="pill" href="/encodings/euc-jp.html">EUC-JP</a>
-        <a class="pill" href="/encodings/iso-2022-jp.html">ISO-2022-JP</a>
-        <a class="pill" href="/encodings/utf-16.html">UTF-16</a>
-        <a class="pill" href="/encodings/utf-16le.html">UTF-16LE</a>
-        <a class="pill" href="/encodings/utf-16be.html">UTF-16BE</a>
+{nav_items}
       </nav>
 
       <main>
@@ -285,21 +290,29 @@ def main() -> None:
     write_file_bytes(ogp_path, ogp_png)
 
     # Home page is always UTF-8
+    home_nav = [(label, f"./encodings/{slug}.html") for slug, _codec, label, _meta in ENCODING_PAGES]
     home = build_html(
         title="encoding-test (GitHub Pages)",
         charset="utf-8",
         description="一般的な文字コードごとのHTML表示テスト（GitHub Pages）",
-        canonical_path="/index.html",
+        canonical_path="./index.html",
+        og_image_path="./ogp.png",
+        nav_home_href="./index.html",
+        nav_encoding_hrefs=home_nav,
     )
     write_text_encoded(path=PUBLIC_DIR / "index.html", text=home, codec="utf-8")
 
     # Encoding pages
+    enc_nav = [(label, f"./{slug}.html") for slug, _codec, label, _meta in ENCODING_PAGES]
     for slug, codec, label, meta_charset in ENCODING_PAGES:
         html = build_html(
             title=f"Encoding: {label}",
             charset=meta_charset,
             description=f"{label} で生成したHTMLページ",
-            canonical_path=f"/encodings/{slug}.html",
+            canonical_path=f"./{slug}.html",
+            og_image_path="../ogp.png",
+            nav_home_href="../index.html",
+            nav_encoding_hrefs=enc_nav,
         )
 
         # For UTF-16LE/BE, most browsers expect BOM to reliably detect UTF-16.
@@ -312,7 +325,10 @@ def main() -> None:
         title="404 - Not Found",
         charset="utf-8",
         description="Page not found",
-        canonical_path="/404.html",
+        canonical_path="./404.html",
+        og_image_path="./ogp.png",
+        nav_home_href="./index.html",
+        nav_encoding_hrefs=home_nav,
     )
     write_text_encoded(path=PUBLIC_DIR / "404.html", text=not_found, codec="utf-8")
 
